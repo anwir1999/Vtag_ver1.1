@@ -28,5 +28,5 @@ void SendATCommand(void);
 void RetrySendATC();
 void ATC_SendATCommand(const char *Command, char *ExpectResponse, uint32_t Timeout, uint8_t RetryCount, SIMCOM_SendATCallBack_t CallBackFunction);
 void ATResponse_Callback(SIMCOM_ResponseEvent_t event, void *ResponseBuffer);
-
+void SMSResponseCallBack(SIMCOM_ResponseEvent_t event, void *ResponseBuffer);
 #endif /* AT_FUNCTION_H_ */

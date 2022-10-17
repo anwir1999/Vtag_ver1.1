@@ -12,7 +12,7 @@
 #include "../MyLib/Sim7070G_General_Control.h"
 
 SemaphoreHandle_t print_mux = NULL;
- xQueueHandle gpio_evt_queue = NULL;
+xQueueHandle gpio_evt_queue = NULL;
 TaskHandle_t xClear_ISR_Handle;
 TaskHandle_t xHandle_main_running;
 
@@ -46,24 +46,26 @@ extern RTC_DATA_ATTR uint64_t t_send_backup;
 extern RTC_DATA_ATTR uint64_t t_send_voltage;
 extern bool Flag_FullBattery;
 extern CFG VTAG_Configure;
+extern bool wifi_motion_detect;
 extern const char *TAG;
+extern bool Flag_sleep_dtr;
 esp_err_t i2c_master_init(void)
 {
-    int i2c_master_port = I2C_MASTER_NUM;
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_MASTER_SDA_IO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_io_num = I2C_MASTER_SCL_IO,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 400,
-        // .clk_flags = 0,          /*!< Optional, you can use I2C_SCLK_SRC_FLAG_* flags to choose i2c source clock here. */
-    };
-    esp_err_t err = i2c_param_config(i2c_master_port, &conf);
-    if (err != ESP_OK) {
-        return err;
-    }
-    return i2c_driver_install(i2c_master_port, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
+	int i2c_master_port = I2C_MASTER_NUM;
+	i2c_config_t conf = {
+			.mode = I2C_MODE_MASTER,
+			.sda_io_num = I2C_MASTER_SDA_IO,
+			.sda_pullup_en = GPIO_PULLUP_ENABLE,
+			.scl_io_num = I2C_MASTER_SCL_IO,
+			.scl_pullup_en = GPIO_PULLUP_ENABLE,
+			.master.clk_speed = 400,
+			// .clk_flags = 0,          /*!< Optional, you can use I2C_SCLK_SRC_FLAG_* flags to choose i2c source clock here. */
+	};
+	esp_err_t err = i2c_param_config(i2c_master_port, &conf);
+	if (err != ESP_OK) {
+		return err;
+	}
+	return i2c_driver_install(i2c_master_port, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 static esp_err_t i2c_WriteByte(i2c_port_t i2c_num, uint8_t slaveAdd, uint8_t Register, uint8_t Data)
 {
@@ -103,7 +105,7 @@ static esp_err_t i2c_ReadByte(i2c_port_t i2c_num, uint8_t slaveAdd, uint8_t Regi
 	vTaskDelay(1 / portTICK_PERIOD_MS);
 }
 
- void clear_interrupt_source(void)
+void clear_interrupt_source(void)
 {
 	uint8_t read = 0;
 #ifdef MC3416
@@ -126,30 +128,30 @@ static esp_err_t i2c_ReadByte(i2c_port_t i2c_num, uint8_t slaveAdd, uint8_t Regi
 void acc_power_down(void)
 {
 	uint8_t read;
-	i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x10);
+	i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x90);
 	i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, &read);
 	ESP_LOGW(TAG_SENSOR, "Sensor power down\r\n");
 }
- void acc_power_up(void)
+void acc_power_up(void)
 {
-    uint8_t read;
-    i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x11);
+	uint8_t read;
+	i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x91);
 	i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, &read);
 	ESP_LOGW(TAG_SENSOR, "Sensor power up\r\n");
 }
 static void clear_ISR_task(void *arg)
 {
 	uint32_t io_num;
-	    for(;;)
-	    {
-			if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY))
-			{
-				count_ISR_I++;
-				clear_interrupt_source();
-				ESP_LOGW(TAG_SENSOR, "Interupt: %d \r\n", count_ISR_I);
-				vTaskDelay(1/portTICK_RATE_MS);
-			}
-	    }
+	for(;;)
+	{
+		if(xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY))
+		{
+			count_ISR_I++;
+			clear_interrupt_source();
+			ESP_LOGW(TAG_SENSOR, "Interupt: %d \r\n", count_ISR_I);
+			vTaskDelay(1/portTICK_RATE_MS);
+		}
+	}
 }
 
 static void IRAM_ATTR gpio_sensor_isr_handler(void* arg)
@@ -159,99 +161,105 @@ static void IRAM_ATTR gpio_sensor_isr_handler(void* arg)
 }
 static void check_motion(void* arg)
 {
-	#define ACC_OFF_TIME            60   //sec
-	#define ACC_WAIT_TIME           60   //sec
-    uint32_t time_tik = xTaskGetTickCount();
-    uint32_t sec_count = 0;
-    bool start = false;
-    bool first_time_dectect = true;
-    bool first_time_off = true;
-    bool first_time_wait = true;
-    bool start_wait = false;
-    uint32_t current_dectect = 0;
-    uint32_t current_off = 0;
-    uint32_t current_wait = 0;
-    bool end = true;
-    while(1)
-    {
-    	if(xTaskGetTickCount() - time_tik > 1000/portTICK_PERIOD_MS)
-    	{
-    		Flag_checkmotin_end = false;
-    		sec_count++;
-    		time_tik = xTaskGetTickCount();
-
-			if(first_time_dectect == true)
+#define ACC_OFF_TIME            60   //sec
+#define ACC_WAIT_TIME           60   //sec
+	uint32_t time_tik = xTaskGetTickCount();
+	uint32_t sec_count = 0;
+	bool start = false;
+	bool first_time_dectect = true;
+	bool first_time_off = true;
+	bool first_time_wait = true;
+	bool start_wait = false;
+	uint32_t current_dectect = 0;
+	uint32_t current_off = 0;
+	uint32_t current_wait = 0;
+	bool end = true;
+	while(1)
+	{
+		if(VTAG_Configure.MA == 0)
+		{
+			if(xTaskGetTickCount() - time_tik > 1000/portTICK_PERIOD_MS)
 			{
-				first_time_dectect = false;
-				current_dectect = sec_count;
-			}
-			if(sec_count - current_dectect > 3)
-			{
-				Flag_checkmotin_end = true;
-				if(((count_ISR_I > 40 || count_ISR_P > 15 || ((count_ISR_I > 15 || count_ISR_P > 10) && Flag_motion_detected == true))))
-				{
-					if(Flag_motion_acc_wake_check == false) Flag_motion_acc_wake_check = true;
-					start_wait = false;
-					first_time_wait = true;
-					end = false;
-					count_ISR_I = count_ISR_P = 0;
-					//start = true;
-					first_time_dectect = true;
-					if(Flag_motion_detected == false && Flag_send_DASP == false)
-					{
-						if(VTAG_Configure._SS == 1)
-						{
-							Flag_send_DAST = true;
-						}
-						flag_start_motion = true;
-						Flag_motion_detected = true;
-						flag_end_motion = false;
-						LED_StartMove();
-					}
-					//Flag_motion_detected = true; // Flag_motion_detected in main.c
-					//acc_capture = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
-					acc_capture = (uint64_t)round(rtc_time_get());
-					ESP_LOGW(TAG_SENSOR, "Motion detected\r\n");
+				Flag_checkmotin_end = false;
+				sec_count++;
+				time_tik = xTaskGetTickCount();
 
-				}
-				else
+				if(first_time_dectect == true)
 				{
-					clear_interrupt_source();
-					clear_interrupt_source();
-					count_ISR_I = count_ISR_P = 0;
-					first_time_dectect = true;
-					while( Flag_button_cycle_start == true);
-					vTaskDelay(15 / portTICK_RATE_MS);
-					// Addded: Ext1_Wakeup_Pin != CHARGE condition
-					while(Flag_button_cycle_start == true);
-					if((Ext1_Wakeup_Pin != CHARGE && Flag_Fota == false && Flag_mainthread_run == false && Flag_Unpair_Task == false && Flag_update_cfg == false && Flag_motion_detected == false && Flag_send_DASP == false && esp_sleep_get_wakeup_cause()!= ESP_SLEEP_WAKEUP_UNDEFINED && Flag_send_DAST == false && Flag_sos == false))
+					first_time_dectect = false;
+					current_dectect = sec_count;
+				}
+				if(sec_count - current_dectect > 3)
+				{
+					Flag_checkmotin_end = true;
+					if(((count_ISR_I > 40 || count_ISR_P > 15 || ((count_ISR_I > 15 || count_ISR_P > 10) && Flag_motion_detected == true))))
 					{
-						if(ACK_Succeed[0] == 0)
+						if(Flag_motion_acc_wake_check == false) Flag_motion_acc_wake_check = true;
+						start_wait = false;
+						first_time_wait = true;
+						end = false;
+						count_ISR_I = count_ISR_P = 0;
+						//start = true;
+						first_time_dectect = true;
+						if(Flag_motion_detected == false && Flag_send_DASP == false)
 						{
-							ESP_sleep(0);
-							// if using this method, t_slept maybe is negative number because esp_clk_slowclk_cal_get() gives different value
-							//t_stop = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
-//							t_stop = rtc_time_get();
-//							ESP_LOGW(TAG_SENSOR, "No motion Entering deep sleep\n");
-//							esp_set_deep_sleep_wake_stub(&wake_stub);
-//							esp_deep_sleep_start();
+							if(VTAG_Configure.WM == 0 ||  (VTAG_Configure.WM == 1 && wifi_motion_detect == true))// loi sau khi gui dasp thi nhan dc dast nen gui lai ban tin
+							{
+								if(VTAG_Configure._SS == 1)
+								{
+									Flag_send_DAST = true;
+								}
+								flag_start_motion = true;
+								Flag_motion_detected = true;
+								flag_end_motion = false;
+								LED_StartMove();
+							}
 						}
-						else if(ACK_Succeed[0] == 3 && ACK_Succeed[1] == 1)
+						//Flag_motion_detected = true; // Flag_motion_detected in main.c
+						//acc_capture = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
+						acc_capture = (uint64_t)round(rtc_time_get());
+						ESP_LOGW(TAG_SENSOR, "Motion detected\r\n");
+
+					}
+					else
+					{
+						clear_interrupt_source();
+						clear_interrupt_source();
+						count_ISR_I = count_ISR_P = 0;
+						first_time_dectect = true;
+						while( Flag_button_cycle_start == true);
+						vTaskDelay(15 / portTICK_RATE_MS);
+						// Addded: Ext1_Wakeup_Pin != CHARGE condition
+						while(Flag_button_cycle_start == true);
+						if((Ext1_Wakeup_Pin != CHARGE && Flag_Fota == false && Flag_mainthread_run == false && Flag_Unpair_Task == false && Flag_update_cfg == false && Flag_motion_detected == false && Flag_send_DASP == false && esp_sleep_get_wakeup_cause()!= ESP_SLEEP_WAKEUP_UNDEFINED && Flag_send_DAST == false && Flag_sos == false))
 						{
-							ESP_sleep(0);
-							// if using this method, t_slept maybe is negative number because esp_clk_slowclk_cal_get() gives different value
-							//t_stop = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
-//							t_stop = rtc_time_get();
-//							ESP_LOGW(TAG_SENSOR, "No motion Entering deep sleep\n");
-//							esp_set_deep_sleep_wake_stub(&wake_stub);
-//							esp_deep_sleep_start();
+							if(ACK_Succeed[0] == 0)
+							{
+								ESP_sleep(0);
+								// if using this method, t_slept maybe is negative number because esp_clk_slowclk_cal_get() gives different value
+								//t_stop = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
+								//							t_stop = rtc_time_get();
+								//							ESP_LOGW(TAG_SENSOR, "No motion Entering deep sleep\n");
+								//							esp_set_deep_sleep_wake_stub(&wake_stub);
+								//							esp_deep_sleep_start();
+							}
+							else if(ACK_Succeed[0] == 3 && ACK_Succeed[1] == 1)
+							{
+								ESP_sleep(0);
+								// if using this method, t_slept maybe is negative number because esp_clk_slowclk_cal_get() gives different value
+								//t_stop = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
+								//							t_stop = rtc_time_get();
+								//							ESP_LOGW(TAG_SENSOR, "No motion Entering deep sleep\n");
+								//							esp_set_deep_sleep_wake_stub(&wake_stub);
+								//							esp_deep_sleep_start();
+							}
 						}
 					}
 				}
 			}
-        }
-    	vTaskDelay(1);
-    }
+		}
+		vTaskDelay(1);
+	}
 }
 double IIR_SOS(double input, uint16_t j, double (*A)[3], double (*B)[3], double (*ftr_Internal)[3])
 {
@@ -292,44 +300,46 @@ void read_3axis(void * arg)
 	signed short read_f = 0;
 	while(1)
 	{
-		uint8_t read = 0;
-		signed short read_f = 0;
-		i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, XOUT_EX_H, &read);
-		read_f = read;
-		i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, XOUT_EX_L, &read);
-		read_f = read_f << 8 | read;
-		delta_x = read_f - x;
-		x = read_f;
-		if(delta_x > THRES)
+		if(VTAG_Configure.MA == 0)
 		{
-			count_ISR_P++;
-			ESP_LOGW(TAG_SENSOR, "Polling: %d \r\n", count_ISR_P);
-		}
+			uint8_t read = 0;
+			signed short read_f = 0;
+			i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, XOUT_EX_H, &read);
+			read_f = read;
+			i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, XOUT_EX_L, &read);
+			read_f = read_f << 8 | read;
+			delta_x = read_f - x;
+			x = read_f;
+			if(delta_x > THRES)
+			{
+				count_ISR_P++;
+				ESP_LOGW(TAG_SENSOR, "Polling: %d \r\n", count_ISR_P);
+			}
 
-		i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, YOUT_EX_H, &read);
-		read_f = read;
-		i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, YOUT_EX_L, &read);
-		read_f = read_f << 8 | read;
-		delta_y = read_f - y;
-		y = read_f;
-		if(delta_y > THRES)
-		{
-			count_ISR_P++;
-			ESP_LOGW(TAG_SENSOR, "Polling: %d \r\n", count_ISR_P);
-		}
+			i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, YOUT_EX_H, &read);
+			read_f = read;
+			i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, YOUT_EX_L, &read);
+			read_f = read_f << 8 | read;
+			delta_y = read_f - y;
+			y = read_f;
+			if(delta_y > THRES)
+			{
+				count_ISR_P++;
+				ESP_LOGW(TAG_SENSOR, "Polling: %d \r\n", count_ISR_P);
+			}
 
-		i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, ZOUT_EX_H, &read);
-		read_f = read;
-		i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, ZOUT_EX_L, &read);
-		read_f = read_f << 8 | read;
-		delta_z = read_f - z;
-		z = read_f;
-		if(delta_z > THRES)
-		{
-			count_ISR_P++;
-			ESP_LOGW(TAG_SENSOR, "Polling: %d \r\n", count_ISR_P);
+			i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, ZOUT_EX_H, &read);
+			read_f = read;
+			i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, ZOUT_EX_L, &read);
+			read_f = read_f << 8 | read;
+			delta_z = read_f - z;
+			z = read_f;
+			if(delta_z > THRES)
+			{
+				count_ISR_P++;
+				ESP_LOGW(TAG_SENSOR, "Polling: %d \r\n", count_ISR_P);
+			}
 		}
-
 		vTaskDelay(T / portTICK_RATE_MS);
 	}
 }
@@ -346,23 +356,31 @@ void gpio_init(void)
 	gpio_config(&io_conf);
 
 	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-	if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED)
+	printf("MA: %d", VTAG_Configure.MA);
+	if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED && VTAG_Configure.MA == 0)
 	{
 
 		xTaskCreate(check_motion, "check_motion", 1024*8, NULL, 5, &check_motion_handle);
 	}
-	xTaskCreate(read_3axis, "read_3axis", 1024*4, NULL, 5, NULL);
-	xTaskCreate(clear_ISR_task, "clear_ISR_task", 1024*2, NULL, 5, NULL);
-	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-	gpio_isr_handler_add(2, gpio_sensor_isr_handler, (void*) 2);
-	clear_interrupt_source();
+	if(VTAG_Configure.MA == 0)
+	{
+		xTaskCreate(read_3axis, "read_3axis", 1024*4, NULL, 5, NULL);
+		xTaskCreate(clear_ISR_task, "clear_ISR_task", 1024*2, NULL, 5, NULL);
+		gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+		gpio_isr_handler_add(2, gpio_sensor_isr_handler, (void*) 2);
+		clear_interrupt_source();
+	}
+	else
+	{
+		acc_power_down();
+	}
 }
 void acc_config(uint8_t gain, uint16_t thres)
 {
 	uint8_t read = 0;
 
 #ifdef MC3416
-	i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x10); // 0x00
+	i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x90); // 0x00
 	i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, &read);
 	ESP_LOGI(TAG_SENSOR,"MODE: %02x", read);
 
@@ -426,7 +444,7 @@ void acc_config(uint8_t gain, uint16_t thres)
 	i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, SHK_THRESH_MSB, &read);
 	ESP_LOGI(TAG_SENSOR,"SHK_THRESH_MSB: %02x", read);
 
-	i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x11);
+	i2c_WriteByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, 0x91);
 	i2c_ReadByte(I2C_MASTER_NUM, MC3413_I2C_ADDR, MODE, &read);
 	ESP_LOGI(TAG_SENSOR,"MODE: %02x", read);
 	clear_interrupt_source();

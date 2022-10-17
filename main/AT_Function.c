@@ -53,4 +53,11 @@ void ATResponse_Callback(SIMCOM_ResponseEvent_t event, void *ResponseBuffer)
 	}
 }
 
-
+void SMSResponseCallBack(SIMCOM_ResponseEvent_t event, void *ResponseBuffer)
+{
+	AT_RX_event = event;
+	if(event == EVEN_OK)
+	{
+		printf((char *)ResponseBuffer);
+	}
+}

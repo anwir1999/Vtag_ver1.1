@@ -79,3 +79,56 @@ void replace_sub_string(char* str, char* substr, char* replace, char* output)
     }
         return;
 }
+int filter_comma_t(char *respond_data, char *word1, char *output)
+{
+    memset(output, 0, strlen(output));
+    char *str;
+    str = strstr(respond_data, word1);
+    printf("%s", str);
+    for(int i = 0; i <strlen(str); i++)
+    {
+        output[i] = str[i];
+        if(str[i] == '\n' || i == strlen(str) - 1)
+        {
+            output[i+1] = '\0';
+            break;
+        }
+    }
+
+    return 0;
+}
+int decodeMessage(char *str_in, char *str_out)
+{
+    int index = 0;
+    int num_x =0;
+    int n = 0;
+    char str[500];
+    for(int i = 0; i < strlen(str_in); i++)
+    {
+        if(i %4 == 2 || i %4 == 3)
+        {
+            str[index] = str_in[i];
+            index++;
+        }
+    }
+    char hex[3];
+    int num = 0;
+    for(int i = 0; i < index; i++)
+    {
+        if(i%2 == 0)
+        {
+            num = 0;
+            hex[num] = str[i];
+            num++;
+        }
+        else
+        {
+            hex[num] = str[i];
+            num_x = (int)strtol(hex, NULL, 16);
+            str_out[n] = num_x;
+            n++;
+        }
+    }
+    str_out[n]='\0';
+    return 0;
+}

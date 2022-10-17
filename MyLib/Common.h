@@ -104,7 +104,14 @@ typedef enum
     FOTA_FAIL,
 	SEND_BACKUP,
 } VTAG_MessageType;
-
+typedef enum
+{
+	NOR = 0,
+	STR_PRE,
+	STR_CUR,
+	CHANGE_RSSI,
+	WIFI_DISAPPEARE,
+}wifi_detect_reason;
 typedef enum
 {
     B_UNPAIR = 2,
@@ -131,6 +138,7 @@ typedef enum
 typedef struct _CFG
 {
 	int _lc		;
+	int MA		;
 	int WM		;
 	int _SS		;
 	int Mode 	;

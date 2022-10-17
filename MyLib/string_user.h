@@ -16,5 +16,6 @@
 
 void String_process_backup_message(char* input, long t_on);
 void replace_sub_string(char* str, char* substr, char* replace, char* output);
-
+int filter_comma_t(char *respond_data, char *word1, char *output);
+int decodeMessage(char *str_in, char *str_out);
 #endif /* MYLIB_STRING_USER_H_ */

@@ -56,6 +56,8 @@ extern RTC_DATA_ATTR uint64_t t_total_passed_BU;
 extern RTC_DATA_ATTR bool Flag_send_vol_percent_incharge;
 extern bool vol_checked;
 extern bool BU_checked;
+extern bool Flag_sms_receive;
+extern bool flag_config;
 #define RESET_NET  1
 #define HARD_RESET 0
 #define SOFT_RESET 0
@@ -78,32 +80,67 @@ bool Is_7070_Sleep()
 void Hard_reset7070G(void)
 {
 	REBOOT:
-		ESP_LOGW(TAG, "shut down 7070\r\n");
-		gpio_hold_dis(VCC_7070_EN);
-		gpio_set_level(VCC_7070_EN, 0);
-		vTaskDelay(300/RTOS_TICK_PERIOD_MS);
-		gpio_set_level(VCC_7070_EN, 1);
-		gpio_hold_en(VCC_7070_EN);
-		vTaskDelay(500 / RTOS_TICK_PERIOD_MS);
+	ESP_LOGW(TAG, "shut down 7070\r\n");
+	gpio_hold_dis(VCC_7070_EN);
+	gpio_set_level(VCC_7070_EN, 0);
+	vTaskDelay(300/RTOS_TICK_PERIOD_MS);
+	gpio_set_level(VCC_7070_EN, 1);
+	gpio_hold_en(VCC_7070_EN);
+	vTaskDelay(500 / RTOS_TICK_PERIOD_MS);
 
-		ESP_LOGW(TAG, "Turn on 7070\r\n");
-		gpio_set_level(UART_SW, 0);
-		TurnOn7070G();
-		vTaskDelay(4000 / RTOS_TICK_PERIOD_MS);
-		Flag_Wait_Exit = false;
-		ATC_SendATCommand("AT\r\n", "OK", 1000, 4, ATResponse_Callback);
-		WaitandExitLoop(&Flag_Wait_Exit);
-		if(AT_RX_event == EVEN_TIMEOUT || AT_RX_event == EVEN_ERROR)
-		{
-			goto REBOOT;
-		}
+	ESP_LOGW(TAG, "Turn on 7070\r\n");
+	gpio_set_level(UART_SW, 0);
+	TurnOn7070G();
+	vTaskDelay(4000 / RTOS_TICK_PERIOD_MS);
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT\r\n", "OK", 1000, 4, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
+	if(AT_RX_event == EVEN_TIMEOUT || AT_RX_event == EVEN_ERROR)
+	{
+		goto REBOOT;
+	}
+}
+void Set7070ToSleepMode(void)
+{
+	//	// Check AT response
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT\r\n", "OK", 1000, 10, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
+
+
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT+CMGD=1,4\r\n", "OK", 1000, 3, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
+	vTaskDelay(1000/RTOS_TICK_PERIOD_MS);
+
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT+CMGL=\"ALL\"\r\n", "OK", 1000, 3, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
+	vTaskDelay(1000/RTOS_TICK_PERIOD_MS);
+	// Code for sleep Sim7070G
+	Flag_Wait_Exit = false;
+
+	ATC_SendATCommand("AT+CSCLK=1\r\n", "OK", 3000, 3, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
+	//	Flag_Wait_Exit = false;
+	//
+	//	ATC_SendATCommand("AT+CFUN=0\r\n", "OK", 1000, 3, ATResponse_Callback);
+	//	WaitandExitLoop(&Flag_Wait_Exit);
+	gpio_set_level(DTR_Sim7070_3V3, 1);
+	gpio_hold_en(DTR_Sim7070_3V3);
+	gpio_deep_sleep_hold_en();
+	ESP_LOGE(TAG, "Set 7070G to sleep mode\r\n");
+	gpio_set_level(18, 1);
+	//	Flag_Cycle_Completed = false;
+	//	ESP_LOGE(TAG, "Enter to deep sleep mode\r\n");
+	//	esp_deep_sleep_start();
 }
 void SoftReboot7070G(void)
 {
 	ESP_LOGW(TAG, "Turn off 7070\r\n");
 	TurnOn7070G();
 	vTaskDelay(2000/RTOS_TICK_PERIOD_MS);
-REBOOT:
+	REBOOT:
 	ESP_LOGW(TAG, "Turn on 7070\r\n");
 	gpio_set_level(UART_SW, 0);
 	TurnOn7070G();
@@ -128,40 +165,40 @@ void Reboot7070G(void)
 	WaitandExitLoop(&Flag_Wait_Exit);
 #elif HARD_RESET
 	REBOOT:
-			gpio_hold_dis(VCC_7070_EN);
-			gpio_set_level(VCC_7070_EN, 0);
-			vTaskDelay(300/RTOS_TICK_PERIOD_MS);
-			gpio_set_level(VCC_7070_EN, 1);
-			gpio_hold_en(VCC_7070_EN);
-			vTaskDelay(500 / RTOS_TICK_PERIOD_MS);
+	gpio_hold_dis(VCC_7070_EN);
+	gpio_set_level(VCC_7070_EN, 0);
+	vTaskDelay(300/RTOS_TICK_PERIOD_MS);
+	gpio_set_level(VCC_7070_EN, 1);
+	gpio_hold_en(VCC_7070_EN);
+	vTaskDelay(500 / RTOS_TICK_PERIOD_MS);
 
-			ESP_LOGW(TAG, "Turn on 7070\r\n");
-			gpio_set_level(UART_SW, 0);
-			TurnOn7070G();
-			vTaskDelay(4000 / RTOS_TICK_PERIOD_MS);
-			Flag_Wait_Exit = false;
-			ATC_SendATCommand("AT\r\n", "OK", 1000, 4, ATResponse_Callback);
-			WaitandExitLoop(&Flag_Wait_Exit);
-			if(AT_RX_event == EVEN_TIMEOUT || AT_RX_event == EVEN_ERROR)
-			{
-				goto REBOOT;
-			}
+	ESP_LOGW(TAG, "Turn on 7070\r\n");
+	gpio_set_level(UART_SW, 0);
+	TurnOn7070G();
+	vTaskDelay(4000 / RTOS_TICK_PERIOD_MS);
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT\r\n", "OK", 1000, 4, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
+	if(AT_RX_event == EVEN_TIMEOUT || AT_RX_event == EVEN_ERROR)
+	{
+		goto REBOOT;
+	}
 #elif SOFT_RESET
-			ESP_LOGW(TAG, "Turn off 7070\r\n");
-			TurnOn7070G();
-			vTaskDelay(2000/RTOS_TICK_PERIOD_MS);
+	ESP_LOGW(TAG, "Turn off 7070\r\n");
+	TurnOn7070G();
+	vTaskDelay(2000/RTOS_TICK_PERIOD_MS);
 	REBOOT:
-			ESP_LOGW(TAG, "Turn on 7070\r\n");
-			gpio_set_level(UART_SW, 0);
-			TurnOn7070G();
-			vTaskDelay(4000 / RTOS_TICK_PERIOD_MS);
-			Flag_Wait_Exit = false;
-			ATC_SendATCommand("AT\r\n", "OK", 1000, 4, ATResponse_Callback);
-			WaitandExitLoop(&Flag_Wait_Exit);
-			if(AT_RX_event == EVEN_TIMEOUT || AT_RX_event == EVEN_ERROR)
-			{
-				goto REBOOT;
-			}
+	ESP_LOGW(TAG, "Turn on 7070\r\n");
+	gpio_set_level(UART_SW, 0);
+	TurnOn7070G();
+	vTaskDelay(4000 / RTOS_TICK_PERIOD_MS);
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT\r\n", "OK", 1000, 4, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
+	if(AT_RX_event == EVEN_TIMEOUT || AT_RX_event == EVEN_ERROR)
+	{
+		goto REBOOT;
+	}
 #endif
 }
 void TurnOn7070G(void)
@@ -175,10 +212,24 @@ void TurnOn7070G(void)
 	}
 	gpio_set_level(PowerKey, 0);
 }
+void TurnOn7070G_DTR(void)
+{
+	//	gpio_set_level(PowerKey, 1);
+	//	while(1)
+	//	{
+	//		if(Reboot7070_Delay_Counter  < 40) { Reboot7070_Delay_Counter++;}
+	//		else { Reboot7070_Delay_Counter = 0; break;}
+	//		vTaskDelay(50 / RTOS_TICK_PERIOD_MS);
+	//	}
+	//	gpio_set_level(PowerKey, 0);
+	ESP_LOGW(TAG, "simcom wake up by DTR");
+	gpio_set_level(DTR_Sim7070_3V3, 0);
+}
 #define MUL_FACT 1
 
 void ESP_sleep(bool Turn_off_7070)
 {
+	uint64_t bitmap_wakeup = 0;
 	GetDeviceTimestamp();
 	Gettimeofday_capture =  VTAG_DeviceParameter.Device_Timestamp;
 	if(strstr(Device_PairStatus, "U") || strlen(Device_PairStatus) == 0)
@@ -194,18 +245,33 @@ void ESP_sleep(bool Turn_off_7070)
 	if(Turn_off_7070 == true)
 	{
 		ESP_LOGW(TAG, "Turn off 7070G\r\n");
-		TurnOn7070G();
+		//TurnOn7070G();
+		vTaskDelay(1000/RTOS_TICK_PERIOD_MS);
+		Set7070ToSleepMode();
+		vTaskDelay(2000/RTOS_TICK_PERIOD_MS);
+		Flag_Wait_Exit = false;
+		ATC_SendATCommand("AT\r\n", "OK", 1000, 0, ATResponse_Callback);
+		WaitandExitLoop(&Flag_Wait_Exit);
+		vTaskDelay(1000/RTOS_TICK_PERIOD_MS);
+
+		//		ESP_LOGI(TAG,"CHECK WAKE\r\n");
+		//		vTaskDelay(5000/RTOS_TICK_PERIOD_MS);
+		gpio_set_level(DTR_Sim7070_3V3, 1);
+
+		Flag_Wait_Exit = false;
+		ATC_SendATCommand("AT\r\n", "OK", 1000, 0, ATResponse_Callback);
+		WaitandExitLoop(&Flag_Wait_Exit);
 	}
 	while(Flag_button_cycle_start == true);
 	vTaskDelay(15 / RTOS_TICK_PERIOD_MS);
-	if(Flag_sos == true || Flag_Unpair_Task == true || Flag_Fota == true || Flag_send_DAST == true || Flag_FullBattery == true)
+	if(Flag_sos == true || Flag_Unpair_Task == true || Flag_Fota == true || Flag_send_DAST == true || Flag_FullBattery == true || (Flag_sms_receive && !flag_config))
 	{
 		Flag_Cycle_Completed = true;
 		return;
 	}
 	ESP_LOGW(TAG, "Tracking runtime: %d s\r\n", TrackingRuntime);
 	//wakeup_time_sec = VTAG_Configure.Period*60 - TrackingRuntime;
-	if(Flag_motion_detected)
+	if(Flag_motion_detected && VTAG_Configure.MA == 0)
 	{
 		t_total_passed_vol = t_total_passed_BU = 0;
 		t_actived = t_actived + time_slept + TrackingRuntime;
@@ -242,8 +308,8 @@ void ESP_sleep(bool Turn_off_7070)
 		if((t_acc + 35) < tp &&  Flag_motion_detected == true)
 		{
 			Flag_acc_wake = true;
-			 Flag_period_wake = false;
-			 ESP_LOGW(TAG, "Enter to deep sleep mode, wake by timer in %d sec\r\n",(int) t_acc);
+			Flag_period_wake = false;
+			ESP_LOGW(TAG, "Enter to deep sleep mode, wake by timer in %d sec\r\n",(int) t_acc);
 			esp_sleep_enable_timer_wakeup(t_acc * 1000000);
 			acc_power_down();
 		}
@@ -266,9 +332,16 @@ void ESP_sleep(bool Turn_off_7070)
 		esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
 		ESP_LOGW(TAG, "Enter to deep sleep mode wake by ACC\r\n");
 		acc_power_up();
-		esp_sleep_enable_ext0_wakeup(ACC_INT, 0);
+		//		if(!Flag_sleep_dtr)
+		//		{
+		//esp_sleep_enable_ext0_wakeup(ACC_INT, 1);
+		if(VTAG_Configure.MA == 0)
+		{
+			bitmap_wakeup |= 1ULL<<ACC_INT;
+		}
+		//		}
 	}
-	if((Flag_motion_detected == false))
+	if(Flag_motion_detected == false ||  VTAG_Configure.MA == 1)
 	{
 		uint64_t t_sleep_vol = 0;
 		uint64_t t_sleep_BU = 0;
@@ -292,7 +365,14 @@ void ESP_sleep(bool Turn_off_7070)
 		}
 		ESP_LOGW(TAG, "Enter to deep sleep mode wake by ACC\r\n");
 		acc_power_up();
-		esp_sleep_enable_ext0_wakeup(ACC_INT, 0);
+		//		if(!Flag_sleep_dtr)
+		//		{
+		//esp_sleep_enable_ext0_wakeup(ACC_INT, 1);
+		if(VTAG_Configure.MA == 0)
+		{
+			bitmap_wakeup |= 1ULL<<ACC_INT;
+		}
+		//		}
 		//if backup array has DASP, wake up after 2minute to send backup array
 		if(Flag_motion_detected == false && Backup_Array_Counter > 0)
 		{
@@ -313,16 +393,22 @@ void ESP_sleep(bool Turn_off_7070)
 			}
 		}
 	}
+	bitmap_wakeup |= 1ULL<<BUTTON;
+	ESP_LOGW(TAG, "Enter to deep sleep mode, wake by BUTTON, ACC\r\n");
 	if(gpio_get_level(CHARGE) == 0)
 	{
-		esp_sleep_enable_ext1_wakeup((1ULL << CHARGE) | (1ULL << BUTTON), ESP_EXT1_WAKEUP_ANY_HIGH);
-		ESP_LOGW(TAG, "Enter to deep sleep mode, wake by CHARGE, BUTTON\r\n");
+		//esp_sleep_enable_ext1_wakeup((1ULL << CHARGE) | (1ULL << BUTTON), ESP_EXT1_WAKEUP_ANY_HIGH);
+		bitmap_wakeup |= 1ULL<<CHARGE;
+		ESP_LOGW(TAG, "Enter to deep sleep mode, wake by CHARGE\r\n");
 	}
-	else
-	{
-		esp_sleep_enable_ext1_wakeup((1ULL << BUTTON), ESP_EXT1_WAKEUP_ANY_HIGH);
-		ESP_LOGW(TAG, "Enter to deep sleep mode, wake by BUTTON\r\n");
-	}
+	esp_sleep_enable_ext1_wakeup(bitmap_wakeup, ESP_EXT1_WAKEUP_ANY_HIGH);
+//	else
+//	{
+//		esp_sleep_enable_ext1_wakeup((1ULL << BUTTON), ESP_EXT1_WAKEUP_ANY_HIGH);
+//		ESP_LOGW(TAG, "Enter to deep sleep mode, wake by BUTTON\r\n");
+//	}
+	esp_sleep_enable_ext0_wakeup(RI_Sim7070_3V3, 0);
+	ESP_LOGW(TAG, "wake EXTI0 by RI UART\r\n");
 	if(Flag_reboot_7070 == true)
 	{
 		ESP_LOGW(TAG, "Shut down 7070\r\n");
