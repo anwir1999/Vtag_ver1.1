@@ -40,7 +40,7 @@ extern RTC_DATA_ATTR uint64_t t_stop;
 extern bool Flag_checkmotin_end;
 extern bool Flag_motion_acc_wake_check;
 extern RTC_DATA_ATTR uint8_t Backup_Array_Counter;
-extern RTC_DATA_ATTR char Location_Backup_Array[BU_Arr_Max_Num][500];
+//extern RTC_DATA_ATTR char Location_Backup_Array[BU_Arr_Max_Num][540];
 extern RTC_DATA_ATTR uint8_t Retry_count;
 extern RTC_DATA_ATTR uint64_t t_send_backup;
 extern RTC_DATA_ATTR uint64_t t_send_voltage;
@@ -212,7 +212,10 @@ static void check_motion(void* arg)
 								flag_start_motion = true;
 								Flag_motion_detected = true;
 								flag_end_motion = false;
-								LED_StartMove();
+								if(VTAG_Configure.WM == 0)
+								{
+									LED_StartMove();
+								}
 							}
 						}
 						//Flag_motion_detected = true; // Flag_motion_detected in main.c
@@ -236,24 +239,13 @@ static void check_motion(void* arg)
 							if(ACK_Succeed[0] == 0)
 							{
 								ESP_sleep(0);
-								// if using this method, t_slept maybe is negative number because esp_clk_slowclk_cal_get() gives different value
-								//t_stop = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
-								//							t_stop = rtc_time_get();
-								//							ESP_LOGW(TAG_SENSOR, "No motion Entering deep sleep\n");
-								//							esp_set_deep_sleep_wake_stub(&wake_stub);
-								//							esp_deep_sleep_start();
 							}
 							else if(ACK_Succeed[0] == 3 && ACK_Succeed[1] == 1)
 							{
 								ESP_sleep(0);
-								// if using this method, t_slept maybe is negative number because esp_clk_slowclk_cal_get() gives different value
-								//t_stop = (uint64_t)round(rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get())/1000000);
-								//							t_stop = rtc_time_get();
-								//							ESP_LOGW(TAG_SENSOR, "No motion Entering deep sleep\n");
-								//							esp_set_deep_sleep_wake_stub(&wake_stub);
-								//							esp_deep_sleep_start();
 							}
 						}
+
 					}
 				}
 			}
@@ -337,7 +329,7 @@ void read_3axis(void * arg)
 			if(delta_z > THRES)
 			{
 				count_ISR_P++;
-				ESP_LOGW(TAG_SENSOR, "Polling: %d \r\n", count_ISR_P);
+				ESP_LOGW(TAG_SENSOR,	"Polling: %d \r\n", count_ISR_P);
 			}
 		}
 		vTaskDelay(T / portTICK_RATE_MS);
@@ -357,20 +349,20 @@ void gpio_init(void)
 
 	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 	printf("MA: %d", VTAG_Configure.MA);
-	if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED && VTAG_Configure.MA == 0)
-	{
+	//	if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED && VTAG_Configure.MA == 0)
+	//	{
 
-		xTaskCreate(check_motion, "check_motion", 1024*8, NULL, 5, &check_motion_handle);
-	}
-	if(VTAG_Configure.MA == 0)
-	{
-		xTaskCreate(read_3axis, "read_3axis", 1024*4, NULL, 5, NULL);
-		xTaskCreate(clear_ISR_task, "clear_ISR_task", 1024*2, NULL, 5, NULL);
-		gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-		gpio_isr_handler_add(2, gpio_sensor_isr_handler, (void*) 2);
-		clear_interrupt_source();
-	}
-	else
+	xTaskCreate(check_motion, "check_motion", 1024*8, NULL, 5, &check_motion_handle);
+	//	}
+	//	if(VTAG_Configure.MA == 0)
+	//	{
+	xTaskCreate(read_3axis, "read_3axis", 1024*4, NULL, 5, NULL);
+	xTaskCreate(clear_ISR_task, "clear_ISR_task", 1024*2, NULL, 5, NULL);
+	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+	gpio_isr_handler_add(2, gpio_sensor_isr_handler, (void*) 2);
+	clear_interrupt_source();
+	//	}
+	if(VTAG_Configure.MA != 0)
 	{
 		acc_power_down();
 	}

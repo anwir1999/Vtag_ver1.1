@@ -292,7 +292,7 @@ void MQTT_BatteryAlert_Payload_Convert(char *type)
 		sprintf(Network_Type_Str, "2g");
 	}
 
-	MQTT_DevConf_Payload_Convert(Mqtt_TX_Str, VTAG_NetworkSignal.RSRP, VTAG_Configure.CC, type, VTAG_NetworkSignal.RSRQ, VTAG_Configure.Period, VTAG_Configure.Mode, VTAG_DeviceParameter.Device_Timestamp, VTAG_Vesion, VTAG_DeviceParameter.Bat_Level, Network_Type_Str, VTAG_Configure.Network, VTAG_Configure._SS, VTAG_Configure.WM, VTAG_Configure._lc);
+	MQTT_DevConf_Payload_Convert(Mqtt_TX_Str, VTAG_NetworkSignal.RSRP, VTAG_Configure.CC, type, VTAG_NetworkSignal.RSRQ, VTAG_Configure.Period, VTAG_Configure.Mode, VTAG_DeviceParameter.Device_Timestamp, VTAG_Vesion, VTAG_DeviceParameter.Bat_Level, Network_Type_Str, VTAG_Configure.Network, VTAG_Configure._SS, VTAG_Configure.WM, VTAG_Configure._lc , VTAG_Configure.MA);
 }
 
 void MQTT_DevConf_FOTA_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, char *cn, uint8_t n)
@@ -301,12 +301,16 @@ void MQTT_DevConf_FOTA_Convert(char *str, int16_t ss, uint8_t cc, char *type, in
 	sprintf(str,"{\"ss\":%d,\"CC\":%d,\"Type\":\"%s\",\"r\":%d,\"MMC\":{\"P\":%d,\"M\":%d},\"T\":%ld,\"V\":\"%s\",\"Cn\":\"%s\",\"N\":%d,\"RR\":%d%d}", ss, cc, type, rq, p, m, ts, version, cn, n, Reboot_reason, Backup_reason);
 }
 
-void MQTT_DevConf_Payload_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *cn, uint8_t n, int _ss, int WM, int _lc)
+void MQTT_DevConf_Payload_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *cn, uint8_t n, int _ss, int WM, int _lc, int MA)
 {
 	memset(str, 0, MQTT_TX_Str_Buf_Lenght);
-	sprintf(str,"{\"ss\":%d,\"CC\":%d,\"Type\":\"%s\",\"r\":%d,\"MMC\":{\"P\":%d,\"M\":%d},\"T\":%ld,\"V\":\"%s\",\"B\":%d,\"Cn\":\"%s\",\"N\":%d,\"_ss\":%d,\"WM\":%d, \"_lc\":%d,\"RR\":%d%d}", ss, cc, type, rq, p, m, ts, version, bat_level, cn, n, _ss, WM,_lc, Reboot_reason, Backup_reason);
+	sprintf(str,"{\"ss\":%d,\"CC\":%d,\"Type\":\"%s\",\"r\":%d,\"MMC\":{\"P\":%d,\"M\":%d},\"T\":%ld,\"V\":\"%s\",\"B\":%d,\"Cn\":\"%s\",\"N\":%d,\"_ss\":%d,\"WM\":%d, \"_lc\":%d,\"MA\":%d,\"RR\":%d%d}", ss, cc, type, rq, p, m, ts, version, bat_level, cn, n, _ss, WM,_lc,MA, Reboot_reason, Backup_reason);
 }
-
+void MQTT_DevConfBLE_Payload_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *cn, uint8_t n,int bt, int dds, int MA, char *macble)
+{
+	memset(str, 0, MQTT_TX_Str_Buf_Lenght);
+	sprintf(str,"{\"ss\":%d,\"CC\":%d,\"Type\":\"%s\",\"r\":%d,\"MMC\":{\"P\":%d,\"M\":%d},\"T\":%ld,\"V\":\"%s\",\"B\":%d,\"Cn\":\"%s\",\"N\":%d,\"BT\":%d,\"_dds\":%d,\"MA\":%d,\"macble\":\"%s\",\"RR\":%d%d}", ss, cc, type, rq, p, m, ts, version, bat_level, cn, n,bt, dds ,MA, macble, Reboot_reason, Backup_reason);
+}
 void MQTT_DevConf_Payload_Convert_Startup(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *IMSI, uint8_t n)
 {
 	memset(str, 0, MQTT_TX_Str_Buf_Lenght);

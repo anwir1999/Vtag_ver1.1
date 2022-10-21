@@ -26,8 +26,9 @@ void MQTT_SubReceive_Callback(void *ResponseBuffer);
 
 void CheckConfigure(char *tok);
 void MQTT_SubReceive_Wait(uint16_t Timeout);
-void MQTT_DevConf_Payload_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *cn, uint8_t n, int _ss, int WM, int _lc);
+void MQTT_DevConf_Payload_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *cn, uint8_t n, int _ss, int WM, int _lc, int MA);
 void MQTT_BatteryAlert_Payload_Convert(char *type);
+void MQTT_DevConfBLE_Payload_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *cn, uint8_t n,int bt, int dds, int MA, char *macble);
 void MQTT_DevConf_FOTA_Convert(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, char *cn, uint8_t n);
 void MQTT_DevConf_Payload_Convert_Startup(char *str, int16_t ss, uint8_t cc, char *type, int16_t rq, uint16_t p, uint8_t m, long ts, char *version, uint8_t bat_level, char *IMSI, uint8_t n);
 #endif /* MYLIB_MQTT_H_ */

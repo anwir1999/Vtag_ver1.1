@@ -58,6 +58,7 @@ extern bool vol_checked;
 extern bool BU_checked;
 extern bool Flag_sms_receive;
 extern bool flag_config;
+extern bool Flag_config_sms;
 #define RESET_NET  1
 #define HARD_RESET 0
 #define SOFT_RESET 0
@@ -107,7 +108,17 @@ void Set7070ToSleepMode(void)
 	ATC_SendATCommand("AT\r\n", "OK", 1000, 10, ATResponse_Callback);
 	WaitandExitLoop(&Flag_Wait_Exit);
 
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT+CFUN=1\r\n", "OK", 1000, 3, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
 
+//	Flag_Wait_Exit = false;
+//	ATC_SendATCommand("AT+CLTS=0\r\n", "OK", 1000, 3, ATResponse_Callback);
+//	WaitandExitLoop(&Flag_Wait_Exit);
+
+	Flag_Wait_Exit = false;
+	ATC_SendATCommand("AT+CNMP=13\r\n", "OK", 1000, 3, ATResponse_Callback);
+	WaitandExitLoop(&Flag_Wait_Exit);
 	Flag_Wait_Exit = false;
 	ATC_SendATCommand("AT+CMGD=1,4\r\n", "OK", 1000, 3, ATResponse_Callback);
 	WaitandExitLoop(&Flag_Wait_Exit);
@@ -127,8 +138,6 @@ void Set7070ToSleepMode(void)
 	//	ATC_SendATCommand("AT+CFUN=0\r\n", "OK", 1000, 3, ATResponse_Callback);
 	//	WaitandExitLoop(&Flag_Wait_Exit);
 	gpio_set_level(DTR_Sim7070_3V3, 1);
-	gpio_hold_en(DTR_Sim7070_3V3);
-	gpio_deep_sleep_hold_en();
 	ESP_LOGE(TAG, "Set 7070G to sleep mode\r\n");
 	gpio_set_level(18, 1);
 	//	Flag_Cycle_Completed = false;
@@ -245,7 +254,7 @@ void ESP_sleep(bool Turn_off_7070)
 	if(Turn_off_7070 == true)
 	{
 		ESP_LOGW(TAG, "Turn off 7070G\r\n");
-		//TurnOn7070G();
+//		TurnOn7070G();
 		vTaskDelay(1000/RTOS_TICK_PERIOD_MS);
 		Set7070ToSleepMode();
 		vTaskDelay(2000/RTOS_TICK_PERIOD_MS);
@@ -264,9 +273,36 @@ void ESP_sleep(bool Turn_off_7070)
 	}
 	while(Flag_button_cycle_start == true);
 	vTaskDelay(15 / RTOS_TICK_PERIOD_MS);
+//	Flag_sos = true;
 	if(Flag_sos == true || Flag_Unpair_Task == true || Flag_Fota == true || Flag_send_DAST == true || Flag_FullBattery == true || (Flag_sms_receive && !flag_config))
 	{
+		if(Flag_sos)
+		{
+			printf("\n sos");
+		}
+		if(Flag_sms_receive)
+		{
+			Flag_button_do_nothing = false;
+			printf("\n sms");
+		}
+		if(Flag_FullBattery)
+		{
+			printf("\n battery");
+		}
+		if(Flag_send_DAST)
+		{
+			printf("\n dast");
+		}
+		if(Flag_Fota)
+		{
+			printf("\n fota");
+		}
+		if(Flag_Unpair_Task)
+		{
+			printf("\n get");
+		}
 		Flag_Cycle_Completed = true;
+		vTaskDelay(5000/RTOS_TICK_PERIOD_MS);
 		return;
 	}
 	ESP_LOGW(TAG, "Tracking runtime: %d s\r\n", TrackingRuntime);
@@ -420,5 +456,8 @@ void ESP_sleep(bool Turn_off_7070)
 	t_slept_calib = 0;
 	esp_task_wdt_reset();  		  //Comment this line to trigger a MWDT timeout
 	esp_set_deep_sleep_wake_stub(&wake_stub);
+	gpio_set_level(DTR_Sim7070_3V3, 1);
+	gpio_hold_en(DTR_Sim7070_3V3);
+	gpio_deep_sleep_hold_en();
 	esp_deep_sleep_start();
 }

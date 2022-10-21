@@ -338,24 +338,32 @@ void init_OTA_component()
 void check_update_task(void *pvParameter)
 {
 	char URL[200] = {0};
-#if SERVER_TEST
-	sprintf(URL, "http://171.244.133.226:8080/Thingworx/Things/%s/Services/OTA", DeviceID_TW_Str);
-#elif INNOWAY_TEST
-	sprintf(URL, DIR_LINK_TEST);
-	printf("api get fota profile: %s\r\n", URL);
-#elif INNOWAY_LIVE
-	sprintf(URL, "http://171.244.133.231:8080/Thingworx/Things/%s/Services/OTA", DeviceID_TW_Str);
-	printf("api get fota profile: %s\r\n", URL);
+#if VTT_LIVE_TEST
+	sprintf(URL, "http://202.191.56.104:5551/uploads/vtt_fota_profile_test.txt");
+#else
+	#if SERVER_TEST
+		sprintf(URL, "http://171.244.133.226:8080/Thingworx/Things/%s/Services/OTA", DeviceID_TW_Str);
+	#elif INNOWAY_TEST
+		sprintf(URL, DIR_LINK_TEST);
+		printf("api get fota profile: %s\r\n", URL);
+	#elif INNOWAY_LIVE
+		sprintf(URL, "http://171.244.133.231:8080/Thingworx/Things/%s/Services/OTA", DeviceID_TW_Str);
+		printf("api get fota profile: %s\r\n", URL);
+	#endif
 #endif
 	printf("Looking for a new firmware...\n");
 	while(1) {
 			memset(rcv_buffer, 0, 200);
 			// configure the esp_http_client
 			esp_http_client_config_t config = {
-#if INNOWAY_LIVE
-					.method = HTTP_METHOD_POST,
-#elif INNOWAY_TEST
+#if VTT_LIVE_TEST
 					.method = HTTP_METHOD_GET,
+#else
+	#if INNOWAY_LIVE
+					.method = HTTP_METHOD_POST,
+	#elif INNOWAY_TEST
+					.method = HTTP_METHOD_GET,
+	#endif
 #endif
 					.url = URL,
 					.event_handler = _http_event_handler,

@@ -68,10 +68,11 @@ extern RTC_DATA_ATTR char VTAG_Vesion[10];
 extern RTC_DATA_ATTR char VTAG_Version_next[10];
 
 #define CALIB_FACTOR	1.048
-#define BU_Arr_Max_Num 	14
+//#define BU_Arr_Max_Num 	12
 #define INNOWAY_LIVE	1
 #define INNOWAY_TEST 	0
 #define SERVER_TEST 	0
+#define VTT_LIVE_TEST	1
 typedef enum
 {
 	NORMAL = 0,
@@ -85,7 +86,10 @@ typedef enum
 	MQTT_PUB,
 	MQTT_SUB_REC,
 } BU_reason;
-
+typedef struct
+{
+	char MAC_Serial[150];
+}mac_serial_st;
 typedef enum
 {
     PAIR = 0,
@@ -102,6 +106,8 @@ typedef enum
 	OFF_ACK,
 	FOTA_SUCCESS,
     FOTA_FAIL,
+	BLE_ON,
+	BLE_OFF,
 	SEND_BACKUP,
 } VTAG_MessageType;
 typedef enum
@@ -138,6 +144,8 @@ typedef enum
 typedef struct _CFG
 {
 	int _lc		;
+	int BT		;
+	int _dds		;
 	int MA		;
 	int WM		;
 	int _SS		;
@@ -215,7 +223,7 @@ typedef void (*SIMCOM_SendATCallBack_t)(SIMCOM_ResponseEvent_t event, void *Resp
 // Device ID
 //#define Device_ID_TW 			"c6118176-b3a9-4c70-8a46-2685edb35d57"									// TW_1
 //#define Device_ID_TW			"ee5db00a-b105-49cf-aeab-c4d0a34bc7e9"									// TW_5
-#define Device_ID_TW			"27244ca7-9ddf-4b22-974b-0818057821de"									// TW_KIT
+#define Device_ID_TW			"MAN02ND00009"									// TW_KIT
 
 #define MQTT_TX_Str_Buf_Lenght	1000
 
