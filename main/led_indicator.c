@@ -2,6 +2,7 @@
 
 extern bool Flag_Fota_led;
 extern bool Flag_Unpair_led;
+extern bool Flag_led_ble;
 extern bool Flag_test_unpair;
 extern bool Flag_wifi_got_led;
 extern bool Flag_check_run;
@@ -239,7 +240,43 @@ void LED_UnpairAndCfg()
 		}
 	}
 }
-
+void LED_bleAndCfg()
+{
+	if(gpio_get_level(CHARGE) == 1)
+	{
+		while(Flag_led_ble == true)
+		{
+			xSemaphoreTake(xMutex_LED, portMAX_DELAY);
+			for(int i = 0; i < 3; i++)
+			{
+				gpio_set_level(LED_2, 1);
+				vTaskDelay(200/portTICK_PERIOD_MS);
+				gpio_set_level(LED_2, 0);
+				vTaskDelay(200/portTICK_PERIOD_MS);
+			}
+			xSemaphoreGive(xMutex_LED);
+			vTaskDelay(500/portTICK_PERIOD_MS);
+		}
+	}
+	else
+	{
+		while(Flag_led_ble == true)
+		{
+			xSemaphoreTake(xMutex_LED, portMAX_DELAY);
+			for(int i = 0; i < 3; i++)
+			{
+				ESP_LOGE(TAG, "Lock_xMutex_LED_blik\r\n");
+				gpio_set_level(LED_1, 1);
+				vTaskDelay(200/portTICK_PERIOD_MS);
+				gpio_set_level(LED_1, 0);
+				vTaskDelay(200/portTICK_PERIOD_MS);
+				ESP_LOGE(TAG, "Unlock_xMutex_LED_blik\r\n");
+			}
+			xSemaphoreGive(xMutex_LED);
+			vTaskDelay(500/portTICK_PERIOD_MS);
+		}
+	}
+}
 void LED_StartMove()
 {
 	if(gpio_get_level(CHARGE) == 1)

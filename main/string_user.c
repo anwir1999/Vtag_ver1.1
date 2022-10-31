@@ -79,12 +79,12 @@ void replace_sub_string(char* str, char* substr, char* replace, char* output)
     }
         return;
 }
-int filter_comma_t(char *respond_data, char *word1, char *output)
+int filter_comma_sms(char *respond_data, char *word1, char *output)
 {
     memset(output, 0, strlen(output));
     char *str;
     str = strstr(respond_data, word1);
-    printf("%s", str);
+//    printf("%s", str);
     for(int i = 0; i <strlen(str); i++)
     {
         output[i] = str[i];
@@ -96,6 +96,32 @@ int filter_comma_t(char *respond_data, char *word1, char *output)
     }
 
     return 0;
+}
+int filter_comma(char *respond_data, int begin, int end, char *output, char exChar)
+{
+	memset(output, 0, strlen(output));
+	int count_filter = 0, lim = 0, start = 0, finish = 0,i;
+	for (i = 0; i < strlen(respond_data); i++)
+	{
+		if ( respond_data[i] == exChar)
+		{
+			count_filter ++;
+			if (count_filter == begin)			start = i+1;
+			if (count_filter == end)			finish = i;
+		}
+
+	}
+	if(count_filter < end)
+	{
+	    finish = strlen(respond_data);
+	}
+	lim = finish - start;
+	for (i = 0; i < lim; i++){
+		output[i] = respond_data[start];
+		start ++;
+	}
+	output[i] = 0;
+	return 0;
 }
 int decodeMessage(char *str_in, char *str_out)
 {

@@ -165,7 +165,6 @@ static void check_motion(void* arg)
 #define ACC_WAIT_TIME           60   //sec
 	uint32_t time_tik = xTaskGetTickCount();
 	uint32_t sec_count = 0;
-	bool start = false;
 	bool first_time_dectect = true;
 	bool first_time_off = true;
 	bool first_time_wait = true;
@@ -192,6 +191,9 @@ static void check_motion(void* arg)
 				if(sec_count - current_dectect > 3)
 				{
 					Flag_checkmotin_end = true;
+//					acc_capture = (uint64_t)round(rtc_time_get());
+//					ESP_LOGW(TAG_SENSOR, "Motion detected\r\n");
+//					Flag_motion_detected = true;
 					if(((count_ISR_I > 40 || count_ISR_P > 15 || ((count_ISR_I > 15 || count_ISR_P > 10) && Flag_motion_detected == true))))
 					{
 						if(Flag_motion_acc_wake_check == false) Flag_motion_acc_wake_check = true;
@@ -199,7 +201,6 @@ static void check_motion(void* arg)
 						first_time_wait = true;
 						end = false;
 						count_ISR_I = count_ISR_P = 0;
-						//start = true;
 						first_time_dectect = true;
 						if(Flag_motion_detected == false && Flag_send_DASP == false)
 						{

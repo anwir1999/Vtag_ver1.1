@@ -93,8 +93,8 @@ void MQTT_Disconnected_Callback(SIMCOM_ResponseEvent_t event, void *ResponseBuff
 		{
 			case 0:
 				ESP_LOGW(TAG, "MQTT disconnect ok\r\n");
-				ATC_SendATCommand("AT+CNACT=0,0\r\n", "DEACTIVE", 3000, 3, MQTT_Disconnected_Callback);
-				break;
+//				ATC_SendATCommand("AT+CNACT=0,0\r\n", "DEACTIVE", 3000, 3, MQTT_Disconnected_Callback);
+//				break;
 			case 1:
 				ESP_LOGW(TAG, "Stop network ok\r\n");
 				Flag_MQTT_Stop_OK = true;
