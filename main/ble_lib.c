@@ -526,14 +526,12 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
 }
 void ble_getAddress(void) {
 
-	if(strlen(VTAG_Configure.ble_macSerial) == 0)
-	{
-		const uint8_t* point = esp_bt_dev_get_address();  printf("\n\n");
-		for (int i = 0; i < 5; i++) {
-			sprintf(VTAG_Configure.ble_macSerial+strlen(VTAG_Configure.ble_macSerial), "%02X:", (int)point[i]);
-		}
-		sprintf(VTAG_Configure.ble_macSerial+strlen(VTAG_Configure.ble_macSerial), "%02X", (int)point[5]);
+	const uint8_t* point = esp_bt_dev_get_address();  printf("\n\n");
+	memset(VTAG_Configure.ble_macSerial, 0, strlen(VTAG_Configure.ble_macSerial));
+	for (int i = 0; i < 5; i++) {
+		sprintf(VTAG_Configure.ble_macSerial+strlen(VTAG_Configure.ble_macSerial), "%02X:", (int)point[i]);
 	}
+	sprintf(VTAG_Configure.ble_macSerial+strlen(VTAG_Configure.ble_macSerial), "%02X", (int)point[5]);
 	printf("mac ble : %s", VTAG_Configure.ble_macSerial);
 }
 

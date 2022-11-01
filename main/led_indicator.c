@@ -240,7 +240,7 @@ void LED_UnpairAndCfg()
 		}
 	}
 }
-void LED_bleAndCfg()
+void LED_ble_scan()
 {
 	if(gpio_get_level(CHARGE) == 1)
 	{
@@ -250,9 +250,11 @@ void LED_bleAndCfg()
 			for(int i = 0; i < 3; i++)
 			{
 				gpio_set_level(LED_2, 1);
-				vTaskDelay(200/portTICK_PERIOD_MS);
+				gpio_set_level(LED_1, 1);
+				vTaskDelay(250/portTICK_PERIOD_MS);
 				gpio_set_level(LED_2, 0);
-				vTaskDelay(200/portTICK_PERIOD_MS);
+				gpio_set_level(LED_1, 0);
+				vTaskDelay(250/portTICK_PERIOD_MS);
 			}
 			xSemaphoreGive(xMutex_LED);
 			vTaskDelay(500/portTICK_PERIOD_MS);
@@ -267,9 +269,9 @@ void LED_bleAndCfg()
 			{
 				ESP_LOGE(TAG, "Lock_xMutex_LED_blik\r\n");
 				gpio_set_level(LED_1, 1);
-				vTaskDelay(200/portTICK_PERIOD_MS);
+				vTaskDelay(250/portTICK_PERIOD_MS);
 				gpio_set_level(LED_1, 0);
-				vTaskDelay(200/portTICK_PERIOD_MS);
+				vTaskDelay(250/portTICK_PERIOD_MS);
 				ESP_LOGE(TAG, "Unlock_xMutex_LED_blik\r\n");
 			}
 			xSemaphoreGive(xMutex_LED);

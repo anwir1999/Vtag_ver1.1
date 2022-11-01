@@ -8,7 +8,7 @@ void LED_ChangeMode();
 void LED_SendSOS();
 void LED_Fota();
 void LED_UnpairAndCfg();
-void LED_bleAndCfg();
+void LED_ble_scan();
 void LED_StartMove();
 void LED_StopMove();
 void LED_Pair();

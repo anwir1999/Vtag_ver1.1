@@ -57,7 +57,7 @@ extern RTC_DATA_ATTR bool Flag_send_vol_percent_incharge;
 extern bool vol_checked;
 extern bool BU_checked;
 extern bool Flag_sms_receive;
-extern bool flag_config;
+extern bool Flag_config;
 extern bool Flag_config_sms;
 extern bool Flag_bleScanSuc;
 #define RESET_NET  1
@@ -211,7 +211,6 @@ void TurnOn7070G_DTR(void)
 	gpio_set_level(DTR_Sim7070_3V3, 0);
 }
 #define MUL_FACT 1
-#define LOG
 void ESP_sleep(bool Turn_off_7070)
 {
 	uint64_t bitmap_wakeup = 0;
@@ -230,10 +229,11 @@ void ESP_sleep(bool Turn_off_7070)
 	while(Flag_button_cycle_start == true);
 	vTaskDelay(15 / RTOS_TICK_PERIOD_MS);
 	//	Flag_sos = true;
+//	vTaskDelay(15000 / RTOS_TICK_PERIOD_MS);
 	if(Flag_sos == true || Flag_Unpair_Task == true || Flag_Fota == true || Flag_send_DAST == true || Flag_FullBattery == true|| VTAG_Configure.BT == 1 \
-			|| (Flag_sms_receive == true && !flag_config) || Flag_bleScanSuc == true)
+			|| (Flag_sms_receive == true && !Flag_config && VTAG_Configure.MA == 1) || Flag_bleScanSuc == true)
 	{
-#ifdef LOG
+#if LOG
 		if(Flag_sos)
 		{
 			printf("\n sos");
@@ -273,21 +273,21 @@ void ESP_sleep(bool Turn_off_7070)
 		return;
 	}
 	ESP_LOGW(TAG, "-----------a----------");
-	Flag_Wait_Exit = false;
-	ATC_SendATCommand("AT+CMGL=\"ALL\"\r\n", "+CMGL:", 1000, 1, ATResponse_Callback);
-	WaitandExitLoop(&Flag_Wait_Exit);
-	if(AT_RX_event == EVEN_OK)
-	{
-		Flag_Wait_Exit = false;
-		ATC_SendATCommand("AT+CMGD=1,4\r\n", "OK", 1000, 3, ATResponse_Callback);
-		WaitandExitLoop(&Flag_Wait_Exit);
-	}
 	if(Turn_off_7070 == true)
 	{
+		Flag_Wait_Exit = false;
+		ATC_SendATCommand("AT+CMGL=\"ALL\"\r\n", "+CMGL:", 1000, 1, ATResponse_Callback);
+		WaitandExitLoop(&Flag_Wait_Exit);
+		if(AT_RX_event == EVEN_OK)
+		{
+			Flag_Wait_Exit = false;
+			ATC_SendATCommand("AT+CMGD=1,4\r\n", "OK", 1000, 1, ATResponse_Callback);
+			WaitandExitLoop(&Flag_Wait_Exit);
+		}
 
-		ESP_LOGW(TAG, "Turn off 7070G\r\n");
 		if(VTAG_Configure.MA == 1 && VTAG_Configure.BT == 0)
 		{
+			ESP_LOGW(TAG, "SLEEP 7070G \r\n");
 			ATC_SendATCommand(AT_MQTT_List[MQTT_STATE_DISC].content, "OK", 1000,0,NULL);
 			Set7070ToSleepMode();
 			vTaskDelay(1000/RTOS_TICK_PERIOD_MS);
@@ -305,6 +305,7 @@ void ESP_sleep(bool Turn_off_7070)
 		}
 		else
 		{
+			ESP_LOGW(TAG, "Turn off 7070G \r\n");
 			TurnOn7070G();
 		}
 	}
